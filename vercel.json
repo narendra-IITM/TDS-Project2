@@ -5,16 +5,16 @@
       "src": "api/route.py",
       "use": "@vercel/python",
       "config": {
-        "runtime": "python3.10",
-        "maxLambdaSize": "15mb"
+        "maxLambdaSize": "15mb",
+        "includeFiles": ["api/*", "requirements.txt"],
+        "excludeFiles": "**/*"
       }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "api/route.py",
-      "methods": ["POST"]
+      "dest": "api/route.py"
     }
   ]
 }
