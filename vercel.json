@@ -7,22 +7,15 @@
       "config": {
         "maxLambdaSize": "15mb",
         "includeFiles": "api/**",
-        "runtime": "python3.9",
-        "maxDuration": 30,
-        "memory": 3008
+        "runtime": "python3.9"
       }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "api/route.py",
-      "methods": ["POST", "OPTIONS"],
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
+      "dest": "/api/route.py",
+      "methods": ["POST", "OPTIONS"]
     }
   ]
 }
