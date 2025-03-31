@@ -1,0 +1,58 @@
+Sun Mar 30 19:55:01 2025: 
+
+=== Starting Server ===
+Sun Mar 30 19:55:02 2025: 
+
+=== Starting Server ===
+Sun Mar 30 19:55:06 2025: Received question: What is the capital of France?
+Sun Mar 30 19:55:06 2025: 
+New Question: What is the capital of France?
+Sun Mar 30 19:55:06 2025: Sending to OpenRouter: Question: What is the capital of France?
+Answer: ...
+Sun Mar 30 19:55:07 2025: Raw response: {"error":{"message":"No auth credentials found","code":401}}...
+Sun Mar 30 19:55:07 2025: Unexpected response format: {
+  "error": {
+    "message": "No auth credentials found",
+    "code": 401
+  }
+}
+Sun Mar 30 19:55:07 2025: Using fallback answer
+Sun Mar 30 19:55:09 2025: Received question: What is 5+5?
+Sun Mar 30 19:55:09 2025: 
+New Question: What is 5+5?
+Sun Mar 30 19:55:09 2025: Sending to OpenRouter: Question: What is 5+5?
+Answer: ...
+Sun Mar 30 19:55:09 2025: Raw response: {"error":{"message":"No auth credentials found","code":401}}...
+Sun Mar 30 19:55:09 2025: Unexpected response format: {
+  "error": {
+    "message": "No auth credentials found",
+    "code": 401
+  }
+}
+Sun Mar 30 19:55:09 2025: Using fallback answer
+Sun Mar 30 19:55:50 2025: Received question: What is 5+5?
+Sun Mar 30 19:55:50 2025: 
+New Question: What is 5+5?
+Sun Mar 30 19:55:50 2025: Sending to OpenRouter: Question: What is 5+5?
+Answer: ...
+Sun Mar 30 19:55:50 2025: Raw response: {"error":{"message":"No auth credentials found","code":401}}...
+Sun Mar 30 19:55:50 2025: Unexpected response format: {
+  "error": {
+    "message": "No auth credentials found",
+    "code": 401
+  }
+}
+Sun Mar 30 19:55:50 2025: Using fallback answer
+Sun Mar 30 19:55:58 2025: Received question: What is the capital of France?
+Sun Mar 30 19:55:58 2025: 
+New Question: What is the capital of France?
+Sun Mar 30 19:55:58 2025: Sending to OpenRouter: Question: What is the capital of France?
+Answer: ...
+Sun Mar 30 19:55:59 2025: Raw response: {"error":{"message":"No auth credentials found","code":401}}...
+Sun Mar 30 19:55:59 2025: Unexpected response format: {
+  "error": {
+    "message": "No auth credentials found",
+    "code": 401
+  }
+}
+Sun Mar 30 19:55:59 2025: Using fallback answer
