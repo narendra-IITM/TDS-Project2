@@ -1,131 +1,122 @@
-from flask import Flask, request, jsonify
 import os
 import zipfile
 import csv
 import re
 import requests
-from io import TextIOWrapper
-
-app = Flask(__name__)
+from io import BytesIO
+import json
 
 FALLBACK_ANSWER = "42"
 LLM_TIMEOUT = 25
 
-def safe_eval(expr):
-    """
-    Evaluates a simple arithmetic expression safely.
-    Allows only digits, operators +, -, *, /, decimal points, and spaces.
-    """
-    # Allow only these characters
-    if re.fullmatch(r'[\d+\-*/\s.()]+', expr):
-        try:
-            # Evaluate expression using eval in a restricted environment
-            result = eval(expr, {"__builtins__": {}})
-            return str(result)
-        except Exception as e:
-            print("Arithmetic evaluation error:", e)
-    return None
+# Keep your existing safe_eval, query_llm, and extract_arithmetic_answer functions
 
-def query_llm(prompt):
-    """
-    Query the LLM using Hugging Face's distilgpt2 model.
-    This function is used as a fallback for non-arithmetic questions.
-    """
-    hf_url = "https://api-inference.huggingface.co/models/distilgpt2"
-    hf_token = os.getenv("HF_TOKEN")
-    headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
-    
+def process_uploaded_file(file_content, filename):
+    """Modified for Vercel's byte-based file handling"""
     try:
-        response = requests.post(hf_url, headers=headers, json={"inputs": prompt}, timeout=LLM_TIMEOUT)
-        response.raise_for_status()
-        data = response.json()
-        print("HuggingFace distilgpt2 response:", data)  # Debug output
+        file_bytes = BytesIO(file_content)
         
-        if isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
-            generated_text = data[0]["generated_text"].strip()
-            # Attempt to extract a number from the response, if present.
-            match = re.search(r'\d+', generated_text)
-            if match:
-                return match.group(0)
-            else:
-                return generated_text  # Fallback: return the whole text if no number is found.
-        else:
-            print("Unexpected response format:", data)
-            return FALLBACK_ANSWER
-    except requests.exceptions.HTTPError as http_err:
-        error_details = (
-            f"HTTP error: {http_err}\nStatus Code: {response.status_code}\nResponse: {response.text}"
-        )
-        print("HuggingFace API error:", error_details)
-        return FALLBACK_ANSWER
-    except Exception as e:
-        print("HuggingFace API error:", e)
-        return FALLBACK_ANSWER
-
-def process_uploaded_file(file):
-    """
-    Processes an uploaded file (ZIP or CSV) to extract the 'answer' column.
-    Assumes that the CSV file contains a column named 'answer'.
-    """
-    try:
-        if file.filename.endswith('.zip'):
-            with zipfile.ZipFile(file) as z:
+        if filename.endswith('.zip'):
+            with zipfile.ZipFile(file_bytes) as z:
                 for name in z.namelist():
                     if name.endswith('.csv'):
                         with z.open(name) as f:
                             reader = csv.DictReader(TextIOWrapper(f))
                             return next(reader)['answer']
         else:
-            reader = csv.DictReader(TextIOWrapper(file))
+            reader = csv.DictReader(TextIOWrapper(file_bytes))
             return next(reader)['answer']
     except Exception as e:
         print("File processing error:", e)
-    return None
+        return None
 
-def extract_arithmetic_answer(question):
-    """
-    If the question is a simple arithmetic problem like "What is 5+5?",
-    extract the arithmetic expression and compute the answer.
-    """
-    # Regex to capture expressions after "What is" and before "?"
-    match = re.search(r'What is\s+(.+?)\s*\?', question, re.IGNORECASE)
-    if match:
-        expr = match.group(1)
-        print("Extracted arithmetic expression:", expr)
-        result = safe_eval(expr)
-        if result is not None:
-            return result
-    return None
-
-@app.route('/api/', methods=['POST'])
-def solve_question():
-    question = request.form.get('question', '').strip()
-    file = request.files.get('file')
+def parse_multipart(body, boundary):
+    """Parse multipart/form-data manually"""
+    parts = body.split(b'--' + boundary)
+    data = {}
+    files = {}
     
-    if not question and not file:
-        return jsonify({"error": "No question or file provided"}), 400
-
-    # If a file is uploaded, process it first.
-    if file:
-        file_answer = process_uploaded_file(file)
-        if file_answer:
-            return jsonify({'answer': file_answer})
+    for part in parts[1:-1]:  # Skip first and last empty parts
+        if b'\r\n\r\n' not in part:
+            continue
+            
+        headers, content = part.split(b'\r\n\r\n', 1)
+        headers = headers.decode().split('\r\n')
+        name = None
+        filename = None
+        
+        for header in headers:
+            if 'Content-Disposition' in header:
+                items = header.split(';')
+                for item in items:
+                    if 'name=' in item:
+                        name = item.split('=')[1].strip('"')
+                    if 'filename=' in item:
+                        filename = item.split('=')[1].strip('"')
+        
+        if filename:
+            files[name] = (filename, content.strip(b'\r\n'))
+        elif name:
+            data[name] = content.strip(b'\r\n').decode()
     
-    # Attempt to process arithmetic questions directly
-    arithmetic_answer = extract_arithmetic_answer(question)
-    if arithmetic_answer is not None:
-        print("Arithmetic answer computed:", arithmetic_answer)
-        return jsonify({'answer': arithmetic_answer})
-    
-    # For other questions, use the LLM endpoint
-    prompt = (
-        "You are an IIT Madras Data Science TA. Answer the following assignment question exactly as required for submission. "
-        "Do not include any extra commentary—only provide the final answer.\n\n"
-        f"Question: {question}\n"
-        "Answer:"
-    )
-    answer = query_llm(prompt)
-    return jsonify({'answer': answer})
+    return data, files
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+def handler(event, context):
+    """Vercel serverless function entry point"""
+    try:
+        # Handle CORS preflight
+        if event['httpMethod'] == 'OPTIONS':
+            return {
+                'statusCode': 204,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                }
+            }
+
+        # Parse request
+        content_type = event.get('headers', {}).get('content-type', '')
+        body = event.get('body', '').encode() if event.get('body') else b''
+        
+        if 'multipart/form-data' in content_type:
+            boundary = content_type.split('boundary=')[-1].encode()
+            data, files = parse_multipart(body, boundary)
+        else:
+            data = parse_qs(body.decode())
+            data = {k: v[0] for k, v in data.items()}
+
+        # Process request
+        question = data.get('question', '')
+        file_info = files.get('file', (None, None))
+        response = {}
+
+        # File processing
+        if file_info[0] and file_info[1]:
+            filename, content = file_info
+            file_answer = process_uploaded_file(content, filename)
+            if file_answer:
+                response['answer'] = file_answer
+
+        # Question processing
+        if question and not response:
+            if arithmetic_answer := extract_arithmetic_answer(question):
+                response['answer'] = arithmetic_answer
+            else:
+                prompt = f"Question: {question}\nAnswer:"
+                response['answer'] = query_llm(prompt)
+
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps(response if response else {'error': 'No valid input'})
+        }
+
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)})
+        }
