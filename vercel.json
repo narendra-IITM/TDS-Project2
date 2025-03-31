@@ -6,15 +6,19 @@
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "15mb",
-        "includeFiles": ["api/*", "requirements.txt"],
-        "excludeFiles": "**/*"
+        "includeFiles": ["api/*", "requirements.txt"]
       }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "api/route.py"
+      "dest": "api/route.py",
+      "methods": ["GET", "POST", "OPTIONS"],
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
+      }
     }
   ]
 }
